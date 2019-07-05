@@ -6,12 +6,11 @@ class Scheduler {
 
 private:
     /* data */
-    std::queue<Process*> RUN_QUEUE;
 public:
     Scheduler(/* args */);
     ~Scheduler();
-    virtual void add_process(Process*);
-    virtual Process* get_next_process();
+    virtual void add_process(Process*) =0;
+    virtual Process* get_next_process() =0;
 };
 
 Scheduler::Scheduler(/* args */) {
@@ -20,8 +19,4 @@ Scheduler::Scheduler(/* args */) {
 
 Scheduler::~Scheduler() {
 
-}
-
-void Scheduler::add_process(Process* proc) {
-    RUN_QUEUE.push(proc);
 }

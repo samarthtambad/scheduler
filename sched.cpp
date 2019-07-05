@@ -7,13 +7,14 @@
 #include <sstream>
 
 #include "DiscreteEventSimulation.h"
-#include "classes/Process.h"
-#include "schedulers/Scheduler.h"
+// #include "classes/Process.h"
+// #include "schedulers/Scheduler.h"
+#include "schedulers/FCFS.h"
 
 using namespace std;
 
 static DiscreteEventSimulation simulation;
-Scheduler scheduler;
+Scheduler* scheduler;
 bool printVerbose = false;
 bool printTrace = false;
 bool printEventQueue = false;
@@ -55,6 +56,7 @@ void parse_args(int argc, char *argv[], string &input_file, string &rand_file, s
                 sched_sym = optarg[0];
                 switch (sched_sym){
                 case 'F':   // FCFS
+                    // scheduler = (Scheduler *) new FCFS();
                     printf("%c", sched_sym);
                     break;
                 case 'L':   // LCFS
@@ -172,6 +174,8 @@ int main(int argc, char *argv[]){
     char *ptr;
     char delim[] = " \n\t";
 
+    scheduler = (Scheduler *) new FCFS();
+
     while ((linelen = getline(&line, &linecap, fptr)) > 0){
         int at, tc, cb, io;
         ptr = strtok(line, delim);  // AT
@@ -186,6 +190,7 @@ int main(int argc, char *argv[]){
         
         // create process and add process-create event to event queue.
         Process* p = new Process(at, tc, cb, io);
+        scheduler->add_process(p);
         proc_queue.push(p);
         
         // Event e;
@@ -197,7 +202,12 @@ int main(int argc, char *argv[]){
         
     }
 
-    printf("%lu", proc_queue.size());
+    Process* p;
+    while((p = scheduler->get_next_process()) != nullptr){
+        printf("AT: %d, TC: %d, CB: %d, IO: %d \n", p->at, p->tc, p->cb, p->io);
+    }
+
+    // printf("%lu", proc_queue.size());
 
 
 //    Event* evt;

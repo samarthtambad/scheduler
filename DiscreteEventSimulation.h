@@ -25,6 +25,7 @@ class DiscreteEventSimulation {
         void put_event(Event*);
         Event* get_event();
         void rm_event();
+        stime_t get_next_event_time();
 };
 
 DiscreteEventSimulation::DiscreteEventSimulation(/* args */)
@@ -44,13 +45,17 @@ void DiscreteEventSimulation::put_event(Event* e){
 
 Event* DiscreteEventSimulation::get_event(){
     if(event_queue.empty()) return nullptr;
-    return event_queue.top();
+    Event* evt = event_queue.top();
+    rm_event();
+    return evt;
 }
 
 void DiscreteEventSimulation::rm_event(){
     if(!event_queue.empty()){
-        Event* e = event_queue.top();
         event_queue.pop();
-        // delete e;
     }
+}
+
+stime_t DiscreteEventSimulation::get_next_event_time(){
+    return event_queue.top()->evtTimeStamp;
 }

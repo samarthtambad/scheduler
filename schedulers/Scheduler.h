@@ -7,6 +7,11 @@ class Scheduler {
 private:
     /* data */
 public:
+
+    bool isPreemptive;
+    stime_t quantum;
+    int maxprio;
+
     Scheduler(/* args */);
     ~Scheduler();
     virtual void add_process(Process*) =0;

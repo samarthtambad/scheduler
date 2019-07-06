@@ -13,7 +13,9 @@ public:
 };
 
 FCFS::FCFS(/* args */) {
-    
+    isPreemptive = false;
+    quantum = 0;
+    maxprio = 4;
 }
 
 FCFS::~FCFS() {

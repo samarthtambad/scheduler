@@ -1,17 +1,19 @@
-
-#include "misc/globals.h"
 #include "Process.h"
 
+#ifndef EVENT_H
+#define EVENT_H
 class Event {
-private:
+// private:
+public:
     /* data */
+    int count;
+    int id;
     Process* evtProcess;
     stime_t evtTimeStamp;
     process_state_t old_state;
     process_state_t new_state;
     state_transition_t transition;
 
-public:
     Event(Process* proc, stime_t tstamp, process_state_t old_s, process_state_t new_s, state_transition_t trans);
     ~Event();
 
@@ -28,3 +30,5 @@ Event::Event(Process* proc, stime_t tstamp, process_state_t old_s, process_state
 Event::~Event() {
 
 }
+
+#endif

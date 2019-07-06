@@ -7,8 +7,6 @@
 #include <sstream>
 
 #include "DiscreteEventSimulation.h"
-// #include "classes/Process.h"
-// #include "schedulers/Scheduler.h"
 #include "schedulers/FCFS.h"
 
 using namespace std;
@@ -20,20 +18,8 @@ bool printTrace = false;
 bool printEventQueue = false;
 vector<long> randvals;
 long rand_ofs = 0;
+stime_t CURRENT_TIME = 0;
 
-queue<Process*> proc_queue;
-
-vector<string> split (const string &s, char delim) {
-    vector<string> result;
-    stringstream ss (s);
-    string item;
-
-    while (getline (ss, item, delim)) {
-        result.push_back (item);
-    }
-
-    return result;
-}
 
 void parse_args(int argc, char *argv[], string &input_file, string &rand_file, string &schedspec){
     int c;
@@ -147,6 +133,13 @@ int myrandom(int burst){
     return res;
 }
 
+void start_simulation(){
+    Event* evt;
+    while((evt = simulation.get_event())){
+
+    }
+}
+
 int main(int argc, char *argv[]){
 
     string input_file, rand_file, schedspec;
@@ -157,10 +150,18 @@ int main(int argc, char *argv[]){
     parseRandFile(rand_file);
     // printf("%lu", randvals.size());
 
-    // for(int i = 0; i < 20; i++){
-    //     simulation.put_event(i, myrandom(1000));
-    // }
-
+    /*
+    // test by adding events at random times
+    for(int i = 0; i < 20; i++){
+        int time;
+        if(i%3 == 0) time = 10;
+        else time = myrandom(1000);
+        Event* e = new Event(nullptr, time, STATE_CREATED, STATE_READY, TRANS_TO_READY);
+        e->id = i;
+        simulation.put_event(e);
+    }
+    */
+    
     // parse input file
     FILE *fptr;
     fptr = fopen(input_file.c_str(), "r");
@@ -174,6 +175,7 @@ int main(int argc, char *argv[]){
     char *ptr;
     char delim[] = " \n\t";
 
+    // for initial testing only. Later, assign scheduler based on -s argument
     scheduler = (Scheduler *) new FCFS();
 
     while ((linelen = getline(&line, &linecap, fptr)) > 0){
@@ -188,17 +190,11 @@ int main(int argc, char *argv[]){
         io = atoi(ptr);
         printf("AT: %d, TC: %d, CB: %d, IO: %d \n", at, tc, cb, io);
         
-        // create process and add process-create event to event queue.
+        // create process and add created->ready event to event queue.
         Process* p = new Process(at, tc, cb, io);
         scheduler->add_process(p);
-        proc_queue.push(p);
-        
-        // Event e;
-        // e.evtProcess = &p;
-        // e.evtTimeStamp = sim_time;
-        // e.newstate = STATE_CREATED;
-        // simulation.put_event(&e);
-        // event_queue.push(&e);
+        Event* e = new Event(p, at, STATE_CREATED, STATE_READY, TRANS_TO_READY);
+        simulation.put_event(e);
         
     }
 
@@ -210,11 +206,11 @@ int main(int argc, char *argv[]){
     // printf("%lu", proc_queue.size());
 
 
-//    Event* evt;
-//    while((evt = simulation.get_event())){
-//    	printf("Event %d : %d\n", evt->id, evt->timestamp);
-//    	simulation.rm_event();
-//    }
+   Event* evt;
+   while((evt = simulation.get_event()) != nullptr){
+   	printf("Event %d : %d\n", evt->count, evt->evtTimeStamp);
+   	simulation.rm_event();
+   }
 
 
     return 0;

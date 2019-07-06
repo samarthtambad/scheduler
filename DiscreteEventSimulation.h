@@ -1,21 +1,16 @@
 #include <vector>
 #include <queue>
+#include "classes/Event.h"
 #include "misc/globals.h"
 
 using namespace std;
 
-struct Event{
-    int id;
-    stime_t timestamp;
-    int count;
-};
-
 struct CompareEvent {
 	bool operator()(Event* const &e1, Event* const &e2) {
-        if(e1->timestamp == e2->timestamp){
+        if(e1->evtTimeStamp == e2->evtTimeStamp){
             return e1->count > e2->count;
         }
-		return e1->timestamp > e2->timestamp;
+		return e1->evtTimeStamp > e2->evtTimeStamp;
 	}
 };
 
@@ -27,7 +22,7 @@ class DiscreteEventSimulation {
     public:
         DiscreteEventSimulation(/* args */);
         ~DiscreteEventSimulation();
-        void put_event(int num, stime_t time);
+        void put_event(Event*);
         Event* get_event();
         void rm_event();
 };
@@ -41,11 +36,8 @@ DiscreteEventSimulation::~DiscreteEventSimulation()
 {
 }
 
-void DiscreteEventSimulation::put_event(int num, int time){
+void DiscreteEventSimulation::put_event(Event* e){
     count++;
-    Event* e = new Event();
-    e->id = num;
-    e->timestamp = time;
     e->count = count;
     event_queue.push(e);
 }
@@ -59,6 +51,6 @@ void DiscreteEventSimulation::rm_event(){
     if(!event_queue.empty()){
         Event* e = event_queue.top();
         event_queue.pop();
-        delete e;
+        // delete e;
     }
 }

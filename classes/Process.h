@@ -1,10 +1,12 @@
 
 #include "../misc/globals.h"
 
+#ifndef PROCESS_H
+#define PROCESS_H
 class Process {
-private:
-    /* data */
+// private:
 public:
+    /* data */
     int pid;
     process_state_t state;
     stime_t at;             // arrival time
@@ -32,3 +34,5 @@ Process::Process(stime_t at, stime_t tc, stime_t cb, stime_t io) {
 Process::~Process() {
 
 }
+
+#endif

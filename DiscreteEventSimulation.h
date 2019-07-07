@@ -26,6 +26,7 @@ class DiscreteEventSimulation {
         Event* get_event();
         void rm_event();
         stime_t get_next_event_time();
+        int get_num_of_events();
 };
 
 DiscreteEventSimulation::DiscreteEventSimulation(/* args */)
@@ -57,5 +58,10 @@ void DiscreteEventSimulation::rm_event(){
 }
 
 stime_t DiscreteEventSimulation::get_next_event_time(){
+    if(event_queue.empty()) return -1;
     return event_queue.top()->evtTimeStamp;
+}
+
+int DiscreteEventSimulation::get_num_of_events(){
+    return event_queue.size();
 }

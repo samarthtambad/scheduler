@@ -12,10 +12,11 @@ public:
     Process* get_next_process();
 };
 
-FCFS::FCFS(/* args */) {
-    isPreemptive = false;
-    quantum = 0;
-    maxprio = 4;
+FCFS::FCFS() {
+    this->scheduler_type = "FCFS";
+    this->is_preemptive = false;
+    this->quantum = 0;
+    this->maxprio = 4;
 }
 
 FCFS::~FCFS() {

@@ -8,11 +8,11 @@
 
 #include "DiscreteEventSimulation.h"
 #include "schedulers/FCFS.h"
-// #include "schedulers/LCFS.h"
-// #include "schedulers/SRTF.h"
-// #include "schedulers/RoundRobin.h"
-// #include "schedulers/PriorityScheduler.h"
-// #include "schedulers/PreemptivePriorityScheduler.h"
+#include "schedulers/LCFS.h"
+#include "schedulers/SRTF.h"
+#include "schedulers/RoundRobin.h"
+#include "schedulers/PriorityScheduler.h"
+#include "schedulers/PreemptivePriorityScheduler.h"
 
 using namespace std;
 
@@ -37,7 +37,6 @@ queue<Process*> proc_list;
 stime_t last_ftime;
 double cpu_util, io_util, avg_turnaround, avg_cpu_wt, throughput;
 
-
 void parse_args(int argc, char *argv[], string &input_file, string &rand_file, string &schedspec){
     int c;
     while ((c = getopt (argc, argv, "vtes:")) != -1){
@@ -59,18 +58,17 @@ void parse_args(int argc, char *argv[], string &input_file, string &rand_file, s
                 sched_sym = optarg[0];
                 switch (sched_sym){
                     case 'F':   // FCFS
-                        // scheduler = (Scheduler *) new FCFS();
-                        printf("%c", sched_sym);
+                        scheduler = (Scheduler *) new FCFS();
                         break;
                     case 'L':   // LCFS
-                        printf("%c", sched_sym);
+                        scheduler = (Scheduler *) new LCFS();
                         break;
                     case 'S':   // SRTF
-                        printf("%c", sched_sym);
+                        scheduler = (Scheduler *) new SRTF();
                         break;
                     case 'R':   // R<num>
                         quantum = atoi(optarg+1);
-                        printf("%c<%d>", sched_sym, quantum);
+                        scheduler = (Scheduler *) new RoundRobin(quantum);
                         break;
                     case 'P':   // P<num>[:<maxprio>]
                         char *str, *res;
@@ -78,12 +76,12 @@ void parse_args(int argc, char *argv[], string &input_file, string &rand_file, s
                         res = strtok(str, ":");
                         quantum = atoi(res);
                         res = strtok(NULL,":");
-                        if(res == NULL){
-                            maxprio = 0;    // default
+                        if(res == NULL){    // maxprio not provided. use default.
+                            scheduler = (Scheduler *) new PriorityScheduler(quantum);
                         } else {
                             maxprio = atoi(res);
+                            scheduler = (Scheduler *) new PriorityScheduler(quantum, maxprio);
                         }
-                        printf("%c<%d>:%d", sched_sym, quantum, maxprio);
                         break;
                     case 'E':   // E<num>[:<maxprios>]
                         char *str1, *res1;
@@ -91,12 +89,12 @@ void parse_args(int argc, char *argv[], string &input_file, string &rand_file, s
                         res1 = strtok(str1, ":");
                         quantum = atoi(res1);
                         res1 = strtok(NULL,":");
-                        if(res1 == NULL){
-                            maxprio = 0;    // default
+                        if(res1 == NULL){   // maxprio not provided. use default.
+                            scheduler = (Scheduler *) new PreemptivePriorityScheduler(quantum);
                         } else {
                             maxprio = atoi(res1);
+                            scheduler = (Scheduler *) new PreemptivePriorityScheduler(quantum, maxprio);
                         }
-                        printf("%c<%d>:%d", sched_sym, quantum, maxprio);
                         break;
                     default:
                         break;
@@ -149,7 +147,6 @@ int myrandom(int burst){
     if(rand_ofs == randvals.size()) rand_ofs = 0;
     return res;
 }
-
 
 void start_simulation(){
     Event* evt;
@@ -263,22 +260,10 @@ int main(int argc, char *argv[]){
 
     string input_file, rand_file, schedspec;
     parse_args(argc, argv, input_file, rand_file, schedspec);
-    printf("printVerbose: %d,printTrace: %d,printEventQueue: %d, SchedSpec: %s\n", printVerbose, printTrace, printEventQueue, schedspec.c_str());
-    printf("Input: %s, Rand: %s \n", input_file.c_str(), rand_file.c_str());
+    // printf("printVerbose: %d,printTrace: %d,printEventQueue: %d, SchedSpec: %s\n", printVerbose, printTrace, printEventQueue, schedspec.c_str());
+    // printf("Input: %s, Rand: %s \n", input_file.c_str(), rand_file.c_str());
 
     parseRandFile(rand_file);
-
-    /*
-    // test by adding events at random times
-    for(int i = 0; i < 20; i++){
-        int time;
-        if(i%3 == 0) time = 10;
-        else time = myrandom(1000);
-        Event* e = new Event(nullptr, time, STATE_CREATED, STATE_READY, TRANS_TO_READY);
-        e->id = i;
-        simulation.put_event(e);
-    }
-    */
     
     // parse input file
     FILE *fptr;
@@ -293,9 +278,6 @@ int main(int argc, char *argv[]){
     char *ptr;
     char delim[] = " \n\t";
 
-    // for initial testing only. Later, assign scheduler based on -s argument
-    scheduler = (Scheduler *) new FCFS();
-
     int count = 0;
     while ((linelen = getline(&line, &linecap, fptr)) > 0){
         int at, tc, cb, io;
@@ -307,7 +289,7 @@ int main(int argc, char *argv[]){
         cb = atoi(ptr);
         ptr = strtok(NULL, delim);  // IO
         io = atoi(ptr);
-        printf("AT: %d, TC: %d, CB: %d, IO: %d \n", at, tc, cb, io);
+        // printf("AT: %d, TC: %d, CB: %d, IO: %d \n", at, tc, cb, io);
         
         // create process and add created->ready event to event queue.
         Process* p = new Process(count, myrandom(scheduler->maxprio), at, tc, cb, io);
@@ -318,18 +300,7 @@ int main(int argc, char *argv[]){
         
     }
 
-//     Process* p;
-//     while((p = scheduler->get_next_process()) != nullptr){
-//         printf("AT: %d, TC: %d, CB: %d, IO: %d \n", p->at, p->tc, p->cb, p->io);
-//     }
-
-//    Event* evt;
-//    while((evt = simulation.get_event()) != nullptr){
-//    	printf("Event %d : %d\n", evt->count, evt->evtTimeStamp);
-//    }
-
     start_simulation();
-
     print_results();
 
     return 0;

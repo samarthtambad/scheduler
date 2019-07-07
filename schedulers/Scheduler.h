@@ -1,5 +1,4 @@
 #include <string>
-#include <queue>
 #include "../classes/Process.h"
 
 #ifndef SCHEDULER_H

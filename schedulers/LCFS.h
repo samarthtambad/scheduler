@@ -1,9 +1,10 @@
+#include <stack>
 #include "Scheduler.h"
 
 class LCFS: public Scheduler{
 private:
     /* data */
-    std::queue<Process*> RUN_QUEUE;
+    std::stack<Process*> RUN_QUEUE;
 public:
     LCFS();
     ~LCFS();
@@ -23,9 +24,12 @@ LCFS::~LCFS(){
 }
 
 void LCFS::add_process(Process* proc){
-
+    RUN_QUEUE.push(proc);
 }
 
 Process* LCFS::get_next_process(){
-    return nullptr;
+    if(RUN_QUEUE.empty()) return nullptr;
+    Process* proc = RUN_QUEUE.top();
+    RUN_QUEUE.pop();    
+    return proc;
 }

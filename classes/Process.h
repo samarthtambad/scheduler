@@ -16,10 +16,9 @@ public:
     stime_t cpuburst;            // cpu burst
     stime_t ioburst;             // io burst
     stime_t state_ts;            // timestamp of the last transition
-    stime_t tt;                  // turnaround time = (finishing time - arrival time)
     stime_t iowaittime;          // io time (i.e. time in blocked state)
     stime_t cpuwaittime;         // cpu waiting time (i.e. time in ready state)
-    stime_t rem;            // time remaining for completing this job
+    stime_t rem;                 // time remaining for completing this job
 
     Process(int, int, stime_t, stime_t, stime_t, stime_t);
     ~Process();
@@ -34,7 +33,6 @@ Process::Process(int pid, int static_prio, stime_t arrival, stime_t totaltime, s
     this->ioburst = ioburst;
     this->state = STATE_CREATED;
     this->state_ts = arrival;
-    this->tt = 0;
     this->iowaittime = 0;
     this->cpuwaittime = 0;
     this->rem = totaltime;

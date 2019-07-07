@@ -1,8 +1,9 @@
+#include <queue>
 #include "Scheduler.h"
 
 class RoundRobin : public Scheduler {
 private:
-    /* data */
+    std::deque<Process*> RUN_QUEUE;
 public:
     RoundRobin(stime_t);
     ~RoundRobin();
@@ -22,9 +23,16 @@ RoundRobin::~RoundRobin(){
 }
 
 void RoundRobin::add_process(Process* proc){
-
+    if(proc->state_ts){   // preempted. add at front.
+        RUN_QUEUE.push_front(proc);
+    } else{ // blocked. add at back.
+        RUN_QUEUE.push_back(proc);
+    }
 }
 
 Process* RoundRobin::get_next_process(){
-    return nullptr;
+    if(RUN_QUEUE.empty()) return nullptr;
+    Process* proc = RUN_QUEUE.front();
+    RUN_QUEUE.pop_front();    
+    return proc;
 }

@@ -19,23 +19,18 @@ using namespace std;
 static DiscreteEventSimulation simulation;
 Scheduler* scheduler;
 
-// char sched_sym;
-// stime_t quantum;
-// int maxprio;
-
 bool printVerbose = false;
 bool printTrace = false;
 bool printEventQueue = false;
-vector<long> randvals;
 long rand_ofs = 0;
-
+vector<long> randvals;
+queue<Process*> proc_list;
 stime_t CURRENT_TIME = 0;
 bool CALL_SCHEDULER = true;
 Process* CURRENT_RUNNING_PROCESS = nullptr;
-queue<Process*> proc_list;
 
-stime_t last_ftime;
-double cpu_util, io_util, avg_turnaround, avg_cpu_wt, throughput;
+stime_t total_iotime;
+
 
 void parse_args(int argc, char *argv[], string &input_file, string &rand_file, string &schedspec){
     int c;
@@ -148,6 +143,41 @@ int myrandom(int burst){
     return res;
 }
 
+void print_result(){
+
+    int num_processes;
+    stime_t total_turnaround = 0, total_cpuwaittime = 0, final_finishtime = 0;
+    stime_t total_cputime = 0, total_iotime = 0;
+    double cpu_util, io_util, avg_turnaround, avg_cpuwaittime, throughput;
+
+    num_processes = proc_list.size();
+    scheduler->print_info();
+    while(!proc_list.empty()){
+        Process* p = proc_list.front();
+        proc_list.pop();
+        p->print_info();
+        final_finishtime = max(final_finishtime, p->state_ts);
+        total_cputime += p->totaltime;
+        total_iotime += p->iowaittime;
+        total_turnaround += (p->state_ts - p->arrival);
+        total_cpuwaittime += p->cpuwaittime;
+    }
+    cpu_util = (double) (total_cputime * 100) / final_finishtime;
+    io_util = (double) (total_iotime * 100) / final_finishtime;
+    avg_turnaround = (double) total_turnaround / num_processes;
+    avg_cpuwaittime = (double) total_cpuwaittime / num_processes;
+    throughput = (double) (num_processes * 100) / final_finishtime;
+    
+    printf("SUM: \t %d %.2lf %.2lf %.2lf %.2lf %.3lf\n", 
+    final_finishtime, 
+    cpu_util, 
+    io_util, 
+    avg_turnaround, 
+    avg_cpuwaittime, 
+    throughput);
+
+}
+
 void start_simulation(){
     Event* evt;
     while((evt = simulation.get_event()) != nullptr){
@@ -161,6 +191,7 @@ void start_simulation(){
             case TRANS_TO_READY:
                 // must come from BLOCKED or PREEMPTION
                 // must add to run queue
+                proc->state = STATE_READY;
                 if(evt->old_state == STATE_CREATED){
                     if(printVerbose) printf("%d %d %d: CREATED -> READY \n", CURRENT_TIME, proc->pid, timeInPrevState);
                 } else if(evt->old_state == STATE_BLOCKED){
@@ -172,6 +203,7 @@ void start_simulation(){
                 break;
             case TRANS_TO_RUN:
                 // create event for either preemption or blocking
+                proc->state = STATE_RUNNING;
                 proc->cpuwaittime = proc->cpuwaittime + timeInPrevState;
                 if(scheduler->is_preemptive && proc->cpuburst > scheduler->quantum){   // is preemptive and was preempted
                     simulation.put_event(new Event(proc, (CURRENT_TIME + scheduler->quantum), STATE_RUNNING, STATE_BLOCKED, TRANS_TO_PREEMPT));
@@ -186,6 +218,7 @@ void start_simulation(){
                 break;
             case TRANS_TO_BLOCK:
                 // create an event for when process becomes ready again
+                proc->state = STATE_BLOCKED;
                 int io;
                 proc->rem = proc->rem - timeInPrevState;
                 CURRENT_RUNNING_PROCESS = nullptr;
@@ -201,6 +234,7 @@ void start_simulation(){
                 break;
             case TRANS_TO_PREEMPT:
                 // add to runqueue (no event is generated)
+                proc->state = STATE_BLOCKED;
                 proc->dynamic_prio--;
                 if(proc->dynamic_prio == -1) proc->dynamic_prio = proc->static_prio - 1;
                 scheduler->add_process(proc);
@@ -238,22 +272,6 @@ void start_simulation(){
             // printf("CURRENT_RUNNING_PROCESS = %d \n", CURRENT_RUNNING_PROCESS->pid);
         }
     }
-}
-
-void print_results(){
-    scheduler->print_info();
-    while(!proc_list.empty()){
-        Process* p = proc_list.front();
-        proc_list.pop();
-        p->print_info();
-    }
-    printf("SUM: \t %d %.2lf %.2lf %.2lf %.2lf %.3lf", 
-    last_ftime, 
-    cpu_util, 
-    io_util, 
-    avg_turnaround, 
-    avg_cpu_wt, 
-    throughput);
 }
 
 int main(int argc, char *argv[]){
@@ -296,12 +314,11 @@ int main(int argc, char *argv[]){
         count++;
         proc_list.push(p);
         Event* e = new Event(p, at, STATE_CREATED, STATE_READY, TRANS_TO_READY);
-        simulation.put_event(e);
-        
+        simulation.put_event(e);   
     }
 
     start_simulation();
-    print_results();
+    print_result();
 
     return 0;
 }

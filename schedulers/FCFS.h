@@ -3,7 +3,6 @@
 
 class FCFS : public Scheduler {
 private:
-    /* data */
     std::queue<Process*> RUN_QUEUE;
 public:
     FCFS(/* args */);

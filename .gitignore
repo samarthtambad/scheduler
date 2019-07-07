@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+outputs/
+inputs/refout/
+inputs/refout_v/

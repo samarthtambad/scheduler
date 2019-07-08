@@ -29,7 +29,9 @@ stime_t CURRENT_TIME = 0;
 bool CALL_SCHEDULER = true;
 Process* CURRENT_RUNNING_PROCESS = nullptr;
 
-stime_t total_iotime;
+bool start_nonio = true;
+int numio = 0;
+stime_t noniotime = -1, total_noniotime = 0;
 
 
 void parse_args(int argc, char *argv[], string &input_file, string &rand_file, string &schedspec){
@@ -163,7 +165,8 @@ void print_result(){
         total_cpuwaittime += p->cpuwaittime;
     }
     cpu_util = (double) (total_cputime * 100) / final_finishtime;
-    io_util = (double) (total_iotime * 100) / final_finishtime;
+    // io_util = (double) (total_iotime * 100) / final_finishtime;
+    io_util = (double) ((final_finishtime - total_noniotime) * 100) / final_finishtime;
     avg_turnaround = (double) total_turnaround / num_processes;
     avg_cpuwaittime = (double) total_cpuwaittime / num_processes;
     throughput = (double) (num_processes * 100) / final_finishtime;
@@ -180,14 +183,21 @@ void print_result(){
 
 void start_simulation(){
     Event* evt;
+
+    if(start_nonio){ // start
+        if(numio == 0){
+            noniotime = CURRENT_TIME;
+            start_nonio = false;
+            // printf("NON-IO started at %d time\n", (noniotime));
+        }
+    }
+
     while((evt = simulation.get_event()) != nullptr){
         Process* proc = evt->evtProcess;
         CURRENT_TIME = evt->evtTimeStamp;
         stime_t timeInPrevState = CURRENT_TIME - proc->state_ts;
-
-        // printf("%d events in queue \n", simulation.get_num_of_events());
         
-        switch (evt->transition) {
+        switch (evt->transition){
             case TRANS_TO_READY:
                 // must come from BLOCKED or PREEMPTION
                 // must add to run queue
@@ -195,8 +205,16 @@ void start_simulation(){
                 if(evt->old_state == STATE_CREATED){
                     if(printVerbose) printf("%d %d %d: CREATED -> READY \n", CURRENT_TIME, proc->pid, timeInPrevState);
                 } else if(evt->old_state == STATE_BLOCKED){
+                    numio--; 
                     if(printVerbose) printf("%d %d %d: BLOCK -> READY \n", CURRENT_TIME, proc->pid, timeInPrevState);
                     //------- something pending here ----------//
+                }
+                if(start_nonio){ // start
+                    if(numio == 0){
+                        noniotime = CURRENT_TIME;
+                        start_nonio = false;
+                        // printf("NON-IO started at %d time\n", (noniotime));
+                    }
                 }
                 scheduler->add_process(proc);
                 CALL_SCHEDULER = true;
@@ -225,6 +243,15 @@ void start_simulation(){
                 if(proc->rem <= 0){
                     if(printVerbose) printf("%d %d %d: Done \n", CURRENT_TIME, proc->pid, timeInPrevState);
                 } else {
+                    numio++;
+                    if(!start_nonio) {
+                        if(numio > 0){
+                            total_noniotime += (CURRENT_TIME - noniotime);
+                            start_nonio = true;
+                            // printf("NON-IO ended at %d time, total = %d\n", CURRENT_TIME, (total_noniotime));
+                            noniotime = 0;
+                        }
+                    }
                     io = myrandom(proc->ioburst);
                     proc->iowaittime = proc->iowaittime + io;
                     simulation.put_event(new Event(proc, (CURRENT_TIME + io), STATE_BLOCKED, STATE_READY, TRANS_TO_READY));
@@ -242,6 +269,7 @@ void start_simulation(){
                 if(printVerbose) printf("preemption \n");
                 break;
             default:
+                printf("DEFAULT");
                 break;
         }
         delete evt;
@@ -271,6 +299,10 @@ void start_simulation(){
             }
             // printf("CURRENT_RUNNING_PROCESS = %d \n", CURRENT_RUNNING_PROCESS->pid);
         }
+    }
+    if(!start_nonio) {
+        total_noniotime += (CURRENT_TIME - noniotime);
+        // printf("NON-IO ended at %d time, total = %d\n", CURRENT_TIME, (total_noniotime));
     }
 }
 

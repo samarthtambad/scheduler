@@ -2,18 +2,19 @@
 #include "Scheduler.h"
 
 struct CompareProcess {
-	bool operator()(Process* const &p1, Process* const &p2) {
-        // if(p1->rem == p2->rem){
-        //     return false;
-        // }
-		return p1->rem > p2->rem;
+	bool operator()(pair<int, Process*> const &p1, pair<int, Process*> const &p2) {
+        if(p1.second->rem == p2.second->rem){
+            return p1.first > p2.first;
+        }
+		return p1.second->rem > p2.second->rem;
 	}
 };
 
 class SRTF : public Scheduler {
 private:
     /* data */
-    std::priority_queue<Process*, deque<Process*>, CompareProcess> RUN_QUEUE;
+    // std::priority_queue<Process*, deque<Process*>, CompareProcess> RUN_QUEUE;
+    std::priority_queue<pair<int, Process*>, deque< pair<int, Process*> >, CompareProcess> RUN_QUEUE;
     int count;
 public:
     SRTF(/* args */);
@@ -36,13 +37,12 @@ SRTF::~SRTF(){
 
 void SRTF::add_process(Process* proc){
     count++;
-    // proc->count = count;
-    RUN_QUEUE.push(proc);
+    RUN_QUEUE.push(make_pair(count, proc));
 }
 
 Process* SRTF::get_next_process(){
     if(RUN_QUEUE.empty()) return nullptr;
-    Process* proc = RUN_QUEUE.top();
+    Process* proc = RUN_QUEUE.top().second;
     RUN_QUEUE.pop();    
     return proc;
 }

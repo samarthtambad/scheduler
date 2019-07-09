@@ -207,7 +207,6 @@ void start_simulation(){
                 } else if(evt->old_state == STATE_BLOCKED){
                     numio--; 
                     if(printVerbose) printf("%d %d %d: BLOCK -> READY \n", CURRENT_TIME, proc->pid, timeInPrevState);
-                    //------- something pending here ----------//
                 }
                 if(start_nonio){ // start
                     if(numio == 0){
@@ -223,26 +222,31 @@ void start_simulation(){
                 // create event for either preemption or blocking
                 proc->state = STATE_RUNNING;
                 proc->cpuwaittime = proc->cpuwaittime + timeInPrevState;
-                if(scheduler->is_preemptive && proc->cpuburst > scheduler->quantum){   // is preemptive and was preempted
-                    simulation.put_event(new Event(proc, (CURRENT_TIME + scheduler->quantum), STATE_RUNNING, STATE_BLOCKED, TRANS_TO_PREEMPT));
-                    if(printVerbose) printf("READY -> RUNNG from preemption \n");
-                } else {    // non-preemptive
+
+                if(proc->rem_cpuburst <= 0){
                     int cb;
                     cb = myrandom(proc->cpuburst);
                     cb = (proc->rem < cb)? proc->rem : cb;
-                    simulation.put_event(new Event(proc, (CURRENT_TIME + cb), STATE_RUNNING, STATE_BLOCKED, TRANS_TO_BLOCK));
-                    if(printVerbose) printf("%d %d %d: READY -> RUNNG cb=%d rem=%d prio=%d \n", CURRENT_TIME, proc->pid, timeInPrevState, cb, proc->rem, proc->dynamic_prio);
+                    proc->current_cpuburst = cb; // added for preemption handling
+                    proc->rem_cpuburst = cb;    // added for preemption handling
+                } 
+
+                if(proc->rem_cpuburst > scheduler->quantum){    // preempt
+                    simulation.put_event(new Event(proc, (CURRENT_TIME + scheduler->quantum), STATE_RUNNING, STATE_READY, TRANS_TO_PREEMPT));
+                    if(printVerbose) printf("%d %d %d: READY -> RUNNG cb=%d rem=%d prio=%d \n", CURRENT_TIME, proc->pid, timeInPrevState, proc->rem_cpuburst, proc->rem, proc->dynamic_prio);
+                } else {    // block
+                    simulation.put_event(new Event(proc, (CURRENT_TIME + proc->rem_cpuburst), STATE_RUNNING, STATE_BLOCKED, TRANS_TO_BLOCK));
+                    if(printVerbose) printf("%d %d %d: READY -> RUNNG cb=%d rem=%d prio=%d \n", CURRENT_TIME, proc->pid, timeInPrevState, proc->rem_cpuburst, proc->rem, proc->dynamic_prio);
+                    proc->rem_cpuburst = 0;
                 }
                 break;
             case TRANS_TO_BLOCK:
                 // create an event for when process becomes ready again
                 proc->state = STATE_BLOCKED;
-                int io;
                 proc->rem = proc->rem - timeInPrevState;
-                CURRENT_RUNNING_PROCESS = nullptr;
-                if(proc->rem <= 0){
+                if(proc->rem <= 0){ // completed
                     if(printVerbose) printf("%d %d %d: Done \n", CURRENT_TIME, proc->pid, timeInPrevState);
-                } else {
+                } else {    // not yet completed
                     numio++;
                     if(!start_nonio) {
                         if(numio > 0){
@@ -252,21 +256,24 @@ void start_simulation(){
                             noniotime = 0;
                         }
                     }
+                    int io;
                     io = myrandom(proc->ioburst);
                     proc->iowaittime = proc->iowaittime + io;
                     simulation.put_event(new Event(proc, (CURRENT_TIME + io), STATE_BLOCKED, STATE_READY, TRANS_TO_READY));
                     if(printVerbose) printf("%d %d %d: RUNNG -> BLOCK ib=%d rem=%d \n", CURRENT_TIME, proc->pid, timeInPrevState, io, proc->rem);
                 }
+                CURRENT_RUNNING_PROCESS = nullptr;
                 CALL_SCHEDULER = true;
                 break;
             case TRANS_TO_PREEMPT:
                 // add to runqueue (no event is generated)
-                proc->state = STATE_BLOCKED;
-                proc->dynamic_prio--;
-                if(proc->dynamic_prio == -1) proc->dynamic_prio = proc->static_prio - 1;
+                proc->state = STATE_READY;
+                proc->rem = proc->rem - timeInPrevState;
+                proc->rem_cpuburst -= scheduler->quantum;   // added for preemption handling
+                if(printVerbose) printf("%d %d %d: RUNNG -> READY cb=%d rem=%d prio=%d \n", CURRENT_TIME, proc->pid, timeInPrevState, proc->rem_cpuburst, proc->rem, proc->dynamic_prio);
+                CURRENT_RUNNING_PROCESS = nullptr;
                 scheduler->add_process(proc);
                 CALL_SCHEDULER = true;
-                if(printVerbose) printf("preemption \n");
                 break;
             default:
                 printf("DEFAULT");
@@ -276,8 +283,6 @@ void start_simulation(){
         evt = nullptr;
 
         proc->state_ts = CURRENT_TIME;
-
-        // printf("%d events in queue \n", simulation.get_num_of_events());
 
         if(CALL_SCHEDULER){
             // printf("SCHEDULER CALLED \n");

@@ -14,7 +14,7 @@ public:
 FCFS::FCFS() {
     this->scheduler_type = "FCFS";
     this->is_preemptive = false;
-    this->quantum = 0;
+    this->quantum = 10000;
     this->maxprio = 4;
 }
 

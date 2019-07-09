@@ -12,14 +12,14 @@ public:
 };
 
 PreemptivePriorityScheduler::PreemptivePriorityScheduler(stime_t quantum){
-    this->scheduler_type = "PREPRIO" + std::to_string(quantum);
+    this->scheduler_type = "PREPRIO " + std::to_string(quantum);
     this->is_preemptive = false;
     this->quantum = quantum;
     this->maxprio = 4;
 }
 
 PreemptivePriorityScheduler::PreemptivePriorityScheduler(stime_t quantum, int maxprio){
-    this->scheduler_type = "PREPRIO" + std::to_string(quantum);
+    this->scheduler_type = "PREPRIO " + std::to_string(quantum);
     this->is_preemptive = false;
     this->quantum = quantum;
     this->maxprio = maxprio;

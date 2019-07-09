@@ -15,7 +15,7 @@ public:
 LCFS::LCFS(){
     this->scheduler_type = "LCFS";
     this->is_preemptive = false;
-    this->quantum = 0;
+    this->quantum = 10000;
     this->maxprio = 4;
 }
 

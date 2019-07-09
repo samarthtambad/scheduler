@@ -3,7 +3,7 @@
 
 class RoundRobin : public Scheduler {
 private:
-    std::deque<Process*> RUN_QUEUE;
+    std::queue<Process*> RUN_QUEUE;
 public:
     RoundRobin(stime_t);
     ~RoundRobin();
@@ -12,7 +12,7 @@ public:
 };
 
 RoundRobin::RoundRobin(stime_t quantum){
-    this->scheduler_type = "RR" + std::to_string(quantum);
+    this->scheduler_type = "RR " + std::to_string(quantum);
     this->is_preemptive = false;
     this->quantum = quantum;
     this->maxprio = 4;
@@ -23,16 +23,12 @@ RoundRobin::~RoundRobin(){
 }
 
 void RoundRobin::add_process(Process* proc){
-    if(proc->state_ts){   // preempted. add at front.
-        RUN_QUEUE.push_front(proc);
-    } else{ // blocked. add at back.
-        RUN_QUEUE.push_back(proc);
-    }
+    RUN_QUEUE.push(proc);
 }
 
 Process* RoundRobin::get_next_process(){
     if(RUN_QUEUE.empty()) return nullptr;
     Process* proc = RUN_QUEUE.front();
-    RUN_QUEUE.pop_front();    
+    RUN_QUEUE.pop();    
     return proc;
 }

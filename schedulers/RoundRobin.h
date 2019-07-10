@@ -13,6 +13,7 @@ public:
 
 RoundRobin::RoundRobin(stime_t quantum){
     this->scheduler_type = "RR " + std::to_string(quantum);
+    this->scheduler_symbol = 'R';
     this->is_preemptive = false;
     this->quantum = quantum;
     this->maxprio = 4;

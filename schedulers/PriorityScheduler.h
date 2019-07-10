@@ -16,6 +16,7 @@ public:
 
 PriorityScheduler::PriorityScheduler(stime_t quantum){
     this->scheduler_type = "PRIO " + std::to_string(quantum);
+    this->scheduler_symbol = 'P';
     this->is_preemptive = false;
     this->quantum = quantum;
     this->maxprio = 4;
@@ -25,6 +26,7 @@ PriorityScheduler::PriorityScheduler(stime_t quantum){
 
 PriorityScheduler::PriorityScheduler(stime_t quantum, int maxprio){
     this->scheduler_type = "PRIO " + std::to_string(quantum);
+    this->scheduler_symbol = 'P';
     this->is_preemptive = false;
     this->quantum = quantum;
     this->maxprio = maxprio;
@@ -37,23 +39,11 @@ PriorityScheduler::~PriorityScheduler(){
 }
 
 void PriorityScheduler::add_process(Process* proc){
-    if(proc->rem_cpuburst > 0){ // was preempted
-        proc->dynamic_prio--;
-        if(proc->dynamic_prio == -1) {
-            proc->dynamic_prio = proc->static_prio - 1;
-            EXPIRED_RUN_QUEUE[proc->dynamic_prio].push(proc);
-            // printf("PROC %d ADDED TO EXPIRED QUEUE\n", proc->pid);
-        } else {
-            ACTIVE_RUN_QUEUE[proc->dynamic_prio].push(proc);
-            // printf("PROC %d ADDED TO ACTIVE QUEUE\n", proc->pid);
-        }
-    } else if(proc->rem_cpuburst == 0 && (proc->totaltime - proc->rem) == 0) {   // was created
-        ACTIVE_RUN_QUEUE[proc->dynamic_prio].push(proc);
-        // printf("PROC %d ADDED TO ACTIVE QUEUE AFTER CREATION\n", proc->pid);
-    } else {    // was blocked
+    if(proc->dynamic_prio == -1){
         proc->dynamic_prio = proc->static_prio - 1;
+        EXPIRED_RUN_QUEUE[proc->dynamic_prio].push(proc);
+    } else {
         ACTIVE_RUN_QUEUE[proc->dynamic_prio].push(proc);
-        // printf("PROC %d ADDED TO EXPIRED QUEUE AFTER BLOCK\n", proc->pid);
     }
 }
 

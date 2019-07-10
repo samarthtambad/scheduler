@@ -11,6 +11,7 @@ private:
 public:
 
     string scheduler_type;
+    char scheduler_symbol;
     bool is_preemptive;
     stime_t quantum;
     int maxprio;

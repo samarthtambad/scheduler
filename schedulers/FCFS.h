@@ -13,6 +13,7 @@ public:
 
 FCFS::FCFS() {
     this->scheduler_type = "FCFS";
+    this->scheduler_symbol = 'F';
     this->is_preemptive = false;
     this->quantum = 10000;
     this->maxprio = 4;

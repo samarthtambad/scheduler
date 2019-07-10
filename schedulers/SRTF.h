@@ -25,6 +25,7 @@ public:
 
 SRTF::SRTF(/* args */){
     this->scheduler_type = "SRTF";
+    this->scheduler_symbol = 'S';
     this->is_preemptive = false;
     this->quantum = 10000;
     this->maxprio = 4;

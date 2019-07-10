@@ -7,12 +7,13 @@
 using namespace std;
 
 class DiscreteEventSimulation {
+    
     private:
-        /* data */
         list<Event*> events_list;
         int count;
+    
     public:
-        DiscreteEventSimulation(/* args */);
+        DiscreteEventSimulation();
         ~DiscreteEventSimulation();
         void put_event(Event*);
         Event* get_event();
@@ -23,13 +24,12 @@ class DiscreteEventSimulation {
         void print_events_in_queue();
 };
 
-DiscreteEventSimulation::DiscreteEventSimulation(/* args */)
-{
+DiscreteEventSimulation::DiscreteEventSimulation(){
     count = 0;
 }
 
-DiscreteEventSimulation::~DiscreteEventSimulation()
-{
+DiscreteEventSimulation::~DiscreteEventSimulation(){
+    
 }
 
 void DiscreteEventSimulation::put_event(Event* e){

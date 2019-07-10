@@ -2,9 +2,10 @@
 #include "Scheduler.h"
 
 class LCFS: public Scheduler{
+
 private:
-    /* data */
     std::stack<Process*> RUN_QUEUE;
+
 public:
     LCFS();
     ~LCFS();

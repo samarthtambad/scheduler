@@ -2,10 +2,11 @@
 #include "Scheduler.h"
 
 class PriorityScheduler : public Scheduler {
+
 private:
-    /* data */
     std::queue<Process*> *ACTIVE_RUN_QUEUE;
     std::queue<Process*> *EXPIRED_RUN_QUEUE;
+
 public:
     PriorityScheduler(stime_t);
     PriorityScheduler(stime_t, int);
@@ -59,7 +60,6 @@ Process* PriorityScheduler::get_next_process(){
         ACTIVE_RUN_QUEUE = EXPIRED_RUN_QUEUE;
         EXPIRED_RUN_QUEUE = tmp;
         tmp = nullptr;
-        // printf("ACTIVE QUEUE <-> EXPIRED QUEUE\n");
         prio = this->maxprio - 1;
         while(prio >= 0 && ACTIVE_RUN_QUEUE[prio].empty()){
             prio--;

@@ -5,7 +5,7 @@ class FCFS : public Scheduler {
 private:
     std::queue<Process*> RUN_QUEUE;
 public:
-    FCFS(/* args */);
+    FCFS();
     ~FCFS();
     void add_process(Process*);
     Process* get_next_process();

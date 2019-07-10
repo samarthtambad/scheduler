@@ -3,10 +3,11 @@
 
 #ifndef PROCESS_H
 #define PROCESS_H
+
 class Process {
-// private:
+
 public:
-    /* data */
+
     int pid;
     int static_prio;
     int dynamic_prio;

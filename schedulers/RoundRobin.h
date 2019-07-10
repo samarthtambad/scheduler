@@ -2,8 +2,10 @@
 #include "Scheduler.h"
 
 class RoundRobin : public Scheduler {
+
 private:
     std::queue<Process*> RUN_QUEUE;
+
 public:
     RoundRobin(stime_t);
     ~RoundRobin();

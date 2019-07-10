@@ -11,19 +11,19 @@ struct CompareProcess {
 };
 
 class SRTF : public Scheduler {
+
 private:
-    /* data */
-    // std::priority_queue<Process*, deque<Process*>, CompareProcess> RUN_QUEUE;
     std::priority_queue<pair<int, Process*>, deque< pair<int, Process*> >, CompareProcess> RUN_QUEUE;
     int count;
+
 public:
-    SRTF(/* args */);
+    SRTF();
     ~SRTF();
     void add_process(Process*);
     Process* get_next_process();
 };
 
-SRTF::SRTF(/* args */){
+SRTF::SRTF(){
     this->scheduler_type = "SRTF";
     this->scheduler_symbol = 'S';
     this->is_preemptive = false;

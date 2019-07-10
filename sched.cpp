@@ -22,9 +22,11 @@ Scheduler* scheduler;
 bool printVerbose = false;
 bool printTrace = false;
 bool printEventQueue = false;
+
 long rand_ofs = 0;
 vector<long> randvals;
 queue<Process*> proc_list;
+
 stime_t CURRENT_TIME = 0;
 bool CALL_SCHEDULER = true;
 Process* CURRENT_RUNNING_PROCESS = nullptr;
@@ -165,7 +167,6 @@ void print_result(){
         total_cpuwaittime += p->cpuwaittime;
     }
     cpu_util = (double) (total_cputime * 100) / final_finishtime;
-    // io_util = (double) (total_iotime * 100) / final_finishtime;
     io_util = (double) ((final_finishtime - total_noniotime) * 100) / final_finishtime;
     avg_turnaround = (double) total_turnaround / num_processes;
     avg_cpuwaittime = (double) total_cpuwaittime / num_processes;
@@ -182,62 +183,71 @@ void print_result(){
 }
 
 void start_simulation(){
+    
     Event* evt;
 
+    // For io utilization calculation, calculate (total time - length of time when no io happening)
+    // capture first non-io time block
     if(start_nonio){ // start
         if(numio == 0){
             noniotime = CURRENT_TIME;
             start_nonio = false;
-            // printf("NON-IO started at %d time\n", (noniotime));
         }
     }
 
     while((evt = simulation.get_event()) != nullptr){
+        
         Process* proc = evt->evtProcess;
         CURRENT_TIME = evt->evtTimeStamp;
         stime_t timeInPrevState = CURRENT_TIME - proc->state_ts;
         
         switch (evt->transition){
+            
             case TRANS_TO_READY:
-                // must come from BLOCKED or PREEMPTION
-                // must add to run queue
+                
                 proc->state = STATE_READY;
+                
                 if(evt->old_state == STATE_CREATED){
                     if(printVerbose) printf("%d %d %d: CREATED -> READY \n", CURRENT_TIME, proc->pid, timeInPrevState);
-                } else if(evt->old_state == STATE_BLOCKED){
+                } 
+                else if(evt->old_state == STATE_BLOCKED){
                     numio--; 
                     proc->dynamic_prio = proc->static_prio - 1;
                     if(printVerbose) printf("%d %d %d: BLOCK -> READY \n", CURRENT_TIME, proc->pid, timeInPrevState);
                 }
+
                 if(start_nonio){ // start
                     if(numio == 0){
                         noniotime = CURRENT_TIME;
                         start_nonio = false;
-                        // printf("NON-IO started at %d time\n", (noniotime));
                     }
                 }
-                if(scheduler->scheduler_symbol == 'E' && CURRENT_RUNNING_PROCESS != nullptr && proc->dynamic_prio > CURRENT_RUNNING_PROCESS->dynamic_prio){ // only in preprio
-                    // add proc to the front of the queue
+
+                if(scheduler->scheduler_symbol == 'E' && CURRENT_RUNNING_PROCESS != nullptr && proc->dynamic_prio > CURRENT_RUNNING_PROCESS->dynamic_prio){ // only in preprio scheduler
                     if(simulation.get_next_event_of_process(CURRENT_RUNNING_PROCESS->pid)->evtTimeStamp != CURRENT_TIME){
                         if(printVerbose) printf("---> PRIO preemption %d by %d ? %d TS=%d now=%d) --> YES\n", CURRENT_RUNNING_PROCESS->pid, proc->pid, (CURRENT_RUNNING_PROCESS->dynamic_prio < proc->dynamic_prio), simulation.get_next_event_of_process(CURRENT_RUNNING_PROCESS->pid)->evtTimeStamp, CURRENT_TIME);
-                        // simulation.print_events_in_queue();
-                        simulation.rm_event(CURRENT_RUNNING_PROCESS->pid); // remove event with pid of CURRENT_RUNNING_PROCESS
-                        simulation.put_event(new Event(CURRENT_RUNNING_PROCESS, CURRENT_TIME, STATE_RUNNING, STATE_READY, TRANS_TO_PREEMPT)); // running to ready of current running process
-                        // simulation.print_events_in_queue();
-                        // CURRENT_RUNNING_PROCESS = nullptr;
-                    } else {
+                        // remove event with pid of CURRENT_RUNNING_PROCESS
+                        simulation.rm_event(CURRENT_RUNNING_PROCESS->pid); 
+                        // add event to preempt current running process now
+                        simulation.put_event(new Event(CURRENT_RUNNING_PROCESS, CURRENT_TIME, STATE_RUNNING, STATE_READY, TRANS_TO_PREEMPT)); 
+                        CURRENT_RUNNING_PROCESS = nullptr;
+                    } 
+                    else {
                         if(printVerbose) printf("---> PRIO preemption %d by %d ? %d TS=%d now=%d) --> NO\n", CURRENT_RUNNING_PROCESS->pid, proc->pid, (CURRENT_RUNNING_PROCESS->dynamic_prio < proc->dynamic_prio), simulation.get_next_event_of_process(CURRENT_RUNNING_PROCESS->pid)->evtTimeStamp, CURRENT_TIME);
                     }
                 }
+
                 scheduler->add_process(proc);
                 CALL_SCHEDULER = true;
                 break;
+
             case TRANS_TO_RUN:
-                // create event for either preemption or blocking
+
                 proc->state = STATE_RUNNING;
                 proc->cpuwaittime = proc->cpuwaittime + timeInPrevState;
 
-                if(proc->rem_cpuburst <= 0){
+                // generate new cpu burst if prev one is over
+                if(proc->rem_cpuburst == 0){
                     int cb;
                     cb = myrandom(proc->cpuburst);
                     cb = (proc->rem < cb)? proc->rem : cb;
@@ -245,28 +255,31 @@ void start_simulation(){
                     proc->rem_cpuburst = cb;    // added for preemption handling
                 } 
 
-                if(proc->rem_cpuburst > scheduler->quantum){    // preempt
+                if(proc->rem_cpuburst > scheduler->quantum){    // add event for preemption after quantum expiration
                     simulation.put_event(new Event(proc, (CURRENT_TIME + scheduler->quantum), STATE_RUNNING, STATE_READY, TRANS_TO_PREEMPT));
                     if(printVerbose) printf("%d %d %d: READY -> RUNNG cb=%d rem=%d prio=%d\n", CURRENT_TIME, proc->pid, timeInPrevState, proc->rem_cpuburst, proc->rem, proc->dynamic_prio);
-                } else {    // block
+                } 
+                else {    // add event to block for io after completion of (remaining) cpu burst
                     simulation.put_event(new Event(proc, (CURRENT_TIME + proc->rem_cpuburst), STATE_RUNNING, STATE_BLOCKED, TRANS_TO_BLOCK));
                     if(printVerbose) printf("%d %d %d: READY -> RUNNG cb=%d rem=%d prio=%d\n", CURRENT_TIME, proc->pid, timeInPrevState, proc->rem_cpuburst, proc->rem, proc->dynamic_prio);
                 }
                 break;
+
             case TRANS_TO_BLOCK:
-                // create an event for when process becomes ready again
+                
                 proc->state = STATE_BLOCKED;
                 proc->rem = proc->rem - timeInPrevState;
                 proc->rem_cpuburst = 0;
-                if(proc->rem <= 0){ // completed
+
+                if(proc->rem <= 0){ // process is completed
                     if(printVerbose) printf("%d %d %d: Done \n", CURRENT_TIME, proc->pid, timeInPrevState);
-                } else {    // not yet completed
+                } 
+                else {    // process not yet completed
                     numio++;
                     if(!start_nonio) {
                         if(numio > 0){
                             total_noniotime += (CURRENT_TIME - noniotime);
                             start_nonio = true;
-                            // printf("NON-IO ended at %d time, total = %d\n", CURRENT_TIME, (total_noniotime));
                             noniotime = 0;
                         }
                     }
@@ -279,8 +292,9 @@ void start_simulation(){
                 CURRENT_RUNNING_PROCESS = nullptr;
                 CALL_SCHEDULER = true;
                 break;
+
             case TRANS_TO_PREEMPT:
-                // add to runqueue (no event is generated)
+                
                 proc->state = STATE_READY;
                 proc->rem = proc->rem - timeInPrevState;
                 proc->rem_cpuburst = proc->rem_cpuburst - timeInPrevState;
@@ -290,6 +304,7 @@ void start_simulation(){
                 scheduler->add_process(proc);
                 CALL_SCHEDULER = true;
                 break;
+
             default:
                 printf("DEFAULT");
                 break;
@@ -300,30 +315,23 @@ void start_simulation(){
         proc->state_ts = CURRENT_TIME;
 
         if(CALL_SCHEDULER){
-            // printf("SCHEDULER CALLED \n");
             if(simulation.get_next_event_time() == CURRENT_TIME){
-                // printf("get_next_event_time() = %d, CURRENT_TIME = %d \n", simulation.get_next_event_time(), CURRENT_TIME);
                 continue;   // process next event from Event queue
             }
             CALL_SCHEDULER = false;     // reset global flag
             if(CURRENT_RUNNING_PROCESS == nullptr){
-                // printf("CURRENT_RUNNING_PROCESS = nullptr \n");
                 CURRENT_RUNNING_PROCESS = scheduler->get_next_process();
                 if(CURRENT_RUNNING_PROCESS == nullptr){
-                    // printf("No processes to run \n");
                     continue;
                 }
                 // create event to make this process runnable for some time.
-                // printf("Ready to running event added \n");
                 simulation.put_event(new Event(CURRENT_RUNNING_PROCESS, (CURRENT_TIME), STATE_READY, STATE_RUNNING, TRANS_TO_RUN));
-                // simulation.print_events_in_queue();
             }
-            // printf("CURRENT_RUNNING_PROCESS = %d \n", CURRENT_RUNNING_PROCESS->pid);
         }
     }
+    // capture last non-io time block
     if(!start_nonio) {
         total_noniotime += (CURRENT_TIME - noniotime);
-        // printf("NON-IO ended at %d time, total = %d\n", CURRENT_TIME, (total_noniotime));
     }
 }
 
@@ -331,9 +339,6 @@ int main(int argc, char *argv[]){
 
     string input_file, rand_file, schedspec;
     parse_args(argc, argv, input_file, rand_file, schedspec);
-    // printf("printVerbose: %d,printTrace: %d,printEventQueue: %d, SchedSpec: %s\n", printVerbose, printTrace, printEventQueue, schedspec.c_str());
-    // printf("Input: %s, Rand: %s \n", input_file.c_str(), rand_file.c_str());
-
     parseRandFile(rand_file);
     
     // parse input file
@@ -360,7 +365,6 @@ int main(int argc, char *argv[]){
         cb = atoi(ptr);
         ptr = strtok(NULL, delim);  // IO
         io = atoi(ptr);
-        // printf("AT: %d, TC: %d, CB: %d, IO: %d \n", at, tc, cb, io);
         
         // create process and add created->ready event to event queue.
         Process* p = new Process(count, myrandom(scheduler->maxprio), at, tc, cb, io);
@@ -369,11 +373,6 @@ int main(int argc, char *argv[]){
         Event* e = new Event(p, at, STATE_CREATED, STATE_READY, TRANS_TO_READY);
         simulation.put_event(e);   
     }
-
-    // simulation.print_events_in_queue();
-    // simulation.rm_event(1);
-    // simulation.print_events_in_queue();
-    
 
     start_simulation();
     print_result();
